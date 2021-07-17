@@ -3,38 +3,37 @@ import Box from '../src/components/Box';
 import MainGrid from '../src/components/MainGrid';
 import { ProfileRelationsBoxWrapper } from '../src/components/ProfileRelations';
 import { AlurakutMenu, AlurakutProfileSidebarMenuDefault, OrkutNostalgicIconSet } from '../src/lib/AluraKutCommons';
+import nookies from 'nookies';
+import jwt from 'jsonwebtoken';
 
-function ProfileSideBar(propriedades) {
-  const [userProfile, setUserProfile] = React.useState('');
+function ProfileSideBar({ propriedades }) {
+  const { avatar_url, login, html_url, name } = propriedades;
 
-  console.log(propriedades);
+  // React.useEffect(() => {
+  //   console.log('QUem é u user', props.githubUser);
+  //   fetch(`https://api.github.com/users/${githubUser}`)
+  //     .then(userInfo => {
+  //       return userInfo.json().then(user => {
+  //         // console.log('DADOS DO user', user);
+  //         setUserProfile(user);
+  //         console.log('DADOS DO userProfile', userProfile);
+  //       }).catch(error => {
+  //         console.log(error)
+  //       })
+  //     });
 
-  React.useEffect(() => {
-    fetch('https://api.github.com/users/rowns07')
-      .then(userInfo => {
-        return userInfo.json().then(user => {
-          // console.log('DADOS DO user', user);
-          setUserProfile(user);
-          // console.log('DADOS DO userProfile', userProfile);
-        }).catch(error => {
-          console.log(error)
-        })
-      });
-
-  }, [])
+  // }, [])
 
   return (
     <Box>
-      {/* <img src={`https://github.com/${propriedades.userName}.png`} style={{ borderRadius: '8px' }} /> */}
-      <img src={userProfile.avatar_url} style={{ borderRadius: '8px' }} />
+      <img src={avatar_url} style={{ borderRadius: '8px' }} />
 
       <hr />
-      {/* <a className="boxLink" href={`https://github.com/${propriedades.userName}`}> */}
-      <a className="boxLink" href={userProfile.html_url} target='_blank'>
-        @{userProfile.login}
+      <a className="boxLink" href={html_url} target='_blank'>
+        @{login}
       </a>
       <hr />
-      <h3>{userProfile.name}</h3>
+      <h3>{name}</h3>
       <small>Masculino, <br />Solteiro(a),<br />Brasil</small>
       <hr />
       <AlurakutProfileSidebarMenuDefault />
@@ -43,25 +42,34 @@ function ProfileSideBar(propriedades) {
   )
 }
 
-export default function Home() {
-  const githubUser = 'rowns07';
+export default function Home(props) {
+  const githubUser = props.githubUser;
+  const [userProfile, setUserProfile] = React.useState('');
   const [followedUsers, setFollowedUsers] = React.useState(['']);
-
-  const api_url = 'https://api.github.com/users/rowns07/following';
+  const [comunidades, setComunidades] = React.useState([]);
 
   const loadData = async () => {
+    const api_url = `https://api.github.com/users/${githubUser}/following`;
     const response = await fetch(api_url);
     const data = await response.json();
-    console.log('CONST DATA', data);
+    // console.log('CONST DATA', data);
     setFollowedUsers(data);
     // console.log('CONST FOLL', followedUsers[0].login);
 
   }
 
+  const getUser = async () => {
+    const response = await fetch(`https://api.github.com/users/${githubUser}`)
+
+    const dadosUser = await response.json()
+    console.log('dadosUser', dadosUser)
+    setUserProfile(dadosUser);
+
+  }
+
   React.useEffect(() => {
     loadData();
-
-
+    getUser();
     fetch('https://graphql.datocms.com/', {
       method: 'POST',
       headers: {
@@ -80,36 +88,16 @@ export default function Home() {
     }).then((response) => response.json())
       .then((respostaCompleta) => {
         const comunidadesVindasDoDato = respostaCompleta.data.allCommunities;
-        console.log('Do Dato:', comunidadesVindasDoDato)
         setComunidades(comunidadesVindasDoDato);
       })
   }, [])
-
-
-  React.useState()
-  const [comunidades, setComunidades] = React.useState([
-    // {
-    //   id: '001',
-    //   title: 'Odeio acordar cedo',
-    //   image: `http://picsum.photos/200`
-    // }
-  ]);
-
-  const pessoasFavoritas = [
-    'marcobrunodev',
-    'omariosouto',
-    'felipefialho',
-    'raphaelfabeni',
-    'juunegreiros',
-    'peas'
-  ];
 
   function handleSendForm(e) {
     e.preventDefault();
     const dadosDoForm = new FormData(e.target);
 
-    console.log('CAMPO:', dadosDoForm.get('title'));
-    console.log('CAMPO:', dadosDoForm.get('imageURL'));
+    // console.log('CAMPO:', dadosDoForm.get('title'));
+    // console.log('CAMPO:', dadosDoForm.get('imageURL'));
 
     const comunidade = {
       title: dadosDoForm.get('title'),
@@ -126,15 +114,10 @@ export default function Home() {
     })
       .then(async (response) => {
         const dados = await response.json();
-        console.log('DADOS --->', dados.registroCriado);
         const comunidade = dados.registroCriado;
         const comunidadesAtualizadas = [...comunidades, comunidade]
         setComunidades(comunidadesAtualizadas);
       })
-
-
-    // console.log('COMUNIDADES', comunidades);
-
   }
 
   return (
@@ -142,7 +125,7 @@ export default function Home() {
       <AlurakutMenu />
       <MainGrid>
         <div className="profileArea" style={{ gridArea: 'profileArea' }}>
-          <ProfileSideBar userName={githubUser} />
+          <ProfileSideBar propriedades={userProfile} />
         </div>
         <div className="welcomeArea" style={{ gridArea: 'welcomeArea' }}>
           <Box>
@@ -181,33 +164,17 @@ export default function Home() {
         <div className="profileRelationsArea" style={{ gridArea: 'profileRelationsArea' }}>
           <ProfileRelationsBoxWrapper>
             <h2 className="smallTitle">
-              Pessoas da Comunidade ({pessoasFavoritas.length})
-
-
-              <ul>
-
-                {followedUsers.map((user) => {
-                  return (
-                    <li key={user.login}>
-                      <a href={`/users/${user.login}`}>
-                        <img src={`https://github.com/${user.login}.png`} />
-                        <span>{user.login}</span>
-                      </a>
-                    </li>
-                  )
-                })}
-              </ul>
-
+              Pessoas da Comunidade API ({followedUsers.length})
             </h2>
+
+
             <ul>
-              {pessoasFavoritas.map((itemAtual) => {
+              {followedUsers.map((user) => {
                 return (
-                  <li key={itemAtual}>
-                    <a href={`/users/${itemAtual}`}>
-                      <img src={`https://github.com/${itemAtual}.png`} />
-                      <span>
-                        {itemAtual}
-                      </span>
+                  <li>
+                    <a href={`/users/${user.login}`} key={user.id}>
+                      <img src={user.avatar_url} />
+                      <span>{user.login}</span>
                     </a>
                   </li>
                 )
@@ -222,8 +189,8 @@ export default function Home() {
             <ul>
               {comunidades.map((itemAtual) => {
                 return (
-                  <li key={itemAtual.id}>
-                    <a href={`/users/${itemAtual.title}`} key={itemAtual.title}>
+                  <li>
+                    <a href={`/users/${itemAtual.title}`} key={itemAtual.id}>
                       <img src={itemAtual.imageUrl} />
                       <span>
                         {itemAtual.title}
@@ -238,4 +205,37 @@ export default function Home() {
       </MainGrid>
     </>
   )
+}
+
+export async function getServerSideProps(context) {
+  const cookies = nookies.get(context)
+  const token = cookies.USER_TOKEN;
+  const { isAuthenticated } = await fetch('https://alurakut.vercel.app/api/auth', {
+    headers: {
+      Authorization: token
+    }
+  })
+    .then((resposta) => resposta.json());
+
+  console.log(isAuthenticated)
+  console.log(token)
+
+
+
+  if (!isAuthenticated) {
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      }
+    }
+  }
+
+  const { githubUser } = jwt.decode(token);
+
+  return {
+    props: {
+      githubUser
+    }, // will be passed to the page component as props
+  }
 }
